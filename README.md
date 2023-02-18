@@ -1,9 +1,11 @@
 # lovr-playspace
 Room boundary overlay for OpenXR, made with LÖVR.
 
+[![Preview](assets/preview.png)](assets/preview.png)
+
 ## Prerequisites
-- LÖVR: If your distro has no package for it, I recommend [their releases](https://github.com/bjornbytes/lovr/releases).
-- git: Recommended for pulling this project.
+- **LÖVR:** If your distro has no package for it, I recommend [their releases](https://github.com/bjornbytes/lovr/releases).
+- **git:** Recommended for pulling this project.
 
 ## How to run
 ```
