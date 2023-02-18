@@ -2,7 +2,7 @@
 Room boundary overlay for OpenXR, made with LÖVR.
 
 ## Prerequisites
-- LÖVR: If your distro has no package for it, I recommend (their releases)[https://github.com/bjornbytes/lovr/releases].
+- LÖVR: If your distro has no package for it, I recommend [their releases](https://github.com/bjornbytes/lovr/releases).
 - git: Recommended for pulling this project.
 
 ## How to run
@@ -16,7 +16,7 @@ Press `action_button` (`A` by default) to set points. Hold `action_button` to sa
 
 ## Configuration
 Settings are stored separated in the program directory, in `config/`.
-- `action_button.txt`: The button to use to do actions like placing points. (See the LÖVR documentation)[https://lovr.org/docs/v0.16.0/DeviceButton].
+- `action_button.txt`: The button to use to do actions like placing points. [See the LÖVR documentation](https://lovr.org/docs/v0.16.0/DeviceButton).
 - `check_density.txt`: BROKEN! With how much line-density (in meters) to check if you're close to a wall.
 - `color_close_corners.json`: How to color the points you've set when they're close. Borders of edges of your defined shape, as well as your grid\_top/grid\_bottom.
 - `color_close_grid.json`: How to color the lines between the corners when close.
