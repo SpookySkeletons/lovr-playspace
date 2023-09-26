@@ -1,4 +1,4 @@
 function lovr.conf(t)
 	t.headset.overlay = true
-	t.window.title = 'lovr-playspace'
+	t.window = false
 end
