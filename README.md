@@ -14,7 +14,7 @@ git clone "https://git.lumen.sh/Fierelier/lovr-playspace"
 ```
 
 ## How to use
-Press `action_button` (`A` by default) to set points. Hold `action_button` to save the points. This will end edit mode. If you want to get back into edit mode, hold `action_button` while the program starts, or delete `config/points.json`. Other settings have to be configured with a text editor, see below.
+Press `action_button` (`trigger` by default) to set points. Hold `action_button` to save the points. This will end edit mode. If you want to get back into edit mode, hold `action_button` while the program starts, or delete `config/points.json`. Other settings have to be configured with a text editor, see below.
 
 ## Configuration
 Settings are stored separated in the program directory, in `config/`.
