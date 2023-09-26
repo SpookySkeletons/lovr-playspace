@@ -252,21 +252,33 @@ function deinitConfigure()
 end
 
 function modeConfigure(pass)
-	local _,hy,_ = lovr.headset.getPosition("head")	
-	
-	for _,hand in ipairs(hands) do
-		if isTracked(hand .. "/point") then
-			local x,y,z = lovr.headset.getPosition(hand .. "/point")
-			pass:setColor(1,0,0,0.5 * saveProg)
-			pass:sphere(x,y,z,0.1)
-			pass:setColor(1,1,1,saveProg)
-			pass:text(
-				"- Press '" ..settings.action_button.. "' to add a point -\n" ..
-				"- Hold '" ..settings.action_button.. "' to save -\n\n" ..
-				string.format("%.2f",x) .. "," .. string.format("%.2f",y) .. "," .. string.format("%.2f",z)
-			,x,y - 0.3,z,0.066)
-		end
-	end
+    local hx, hy, hz = lovr.headset.getPosition("head")
+    
+    for _, hand in ipairs(hands) do
+        if isTracked(hand .. "/point") then
+            local cx, cy, cz = lovr.headset.getPosition(hand .. "/point")
+            
+            -- Compute the direction from the controller to the headset
+            local dirX = hx - cx
+            local dirY = hy - cy
+            local dirZ = hz - cz
+
+            -- Compute the rotation angle to make the text face the headset
+            local angle = math.atan2(dirX, dirZ)
+
+            pass:setColor(1, 0, 0, 0.5 * saveProg)
+            pass:sphere(cx, cy, cz, 0.1)
+            pass:setColor(1, 1, 1, saveProg)
+            
+            -- Draw the text with the computed rotation
+            pass:text(
+                "- Press '" .. settings.action_button .. "' to add a point -\n" ..
+                "- Hold '" .. settings.action_button .. "' to save -\n\n" ..
+                string.format("%.2f", cx) .. "," .. string.format("%.2f", cy) .. "," .. string.format("%.2f", cz),
+                cx, cy - 0.3, cz, 0.066, angle, 0, 1, 0
+            )
+        end
+    end
 	
 	local inputDev = getButton(lovr.headset.wasReleased,settings.action_button,hands)
 	if inputDev ~= nil and isTracked(inputDev) then
