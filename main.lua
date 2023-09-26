@@ -66,41 +66,59 @@ function readFile(fileName)
 	return content
 end
 
-function getDistanceBetweenPoints3D(x1,y1,z1,x2,y2,z2)
-	return (((x2-x1)*(x2-x1)) + ((y2-y1)*(y2-y1)) + ((z2-z1)*(z2-z1))) / 2
+function getDistanceBetweenPoints3D(x1, y1, z1, x2, y2, z2)
+    return math.sqrt((x2 - x1)^2 + (z2 - z1)^2)
 end
 
--- This could be optimized by using a proper algorithm or determining which point of the line is closer to x,y,z first
-function getLineDistance(x,y,z,point1,point2)
-	local lx1 = point1[1]
-	local ly1 = 0
-	local lz1 = point1[2]
-	local lx2 = point2[1]
-	local ly2 = 0
-	local lz2 = point2[2]
-	
-	local d = getDistanceBetweenPoints3D(lx1,ly1,lz1,lx2,ly2,lz2)
-	local dx = (lx2 - lx1) / d
-	local dy = (ly2 - ly1) / d
-	local dz = (lz2 - lz1) / d
-	local cx1 = lx1
-	local cy1 = ly1
-	local cz1 = lz1
-	local lowestDist = 9999
-	
-	while cx1 < lx1 do
-		local dist = getDistanceBetweenPoints3D(x,y,z,cx1,cy1,cz1)
-		if dist < lowestDist then
-			lowestDist = dist
-		else
-			return lowestDist
-		end
-		cx1 = cx1 + (dx * settings.check_density)
-		cy1 = cy1 + (dy * settings.check_density)
-		cz1 = cz1 + (dz * settings.check_density)
-	end
-	
-	return lowestDist
+function getLineDistance(x, _, z, point1, point2)  -- Notice the underscore for y
+    -- Vector from point1 to point2
+    local dx = point2[1] - point1[1]
+    local dz = point2[2] - point1[2]
+    
+    -- Vector from point1 to the given point (x, y, z)
+    local px = x - point1[1]
+    local pz = z - point1[2]
+
+    -- Dot product
+    local dot = px * dx + pz * dz
+    local len_sq = dx * dx + dz * dz
+    local param = -1
+    if len_sq ~= 0 then  -- in case of 0 length line
+        param = dot / len_sq
+    end
+
+    local xx, zz
+
+    if param < 0 then
+        xx = point1[1]
+        zz = point1[2]
+    elseif param > 1 then
+        xx = point2[1]
+        zz = point2[2]
+    else
+        xx = point1[1] + param * dx
+        zz = point1[2] + param * dz
+    end
+
+    local dx_ = x - xx
+    local dz_ = z - zz
+    return math.sqrt(dx_ * dx_ + dz_ * dz_)
+end
+
+
+
+function getClosestDistanceToPerimeter(x, y, z, points)
+    local lowestDist = 9999
+    local length = #points
+    for i = 1, length do
+        local point1 = points[i]
+        local point2 = points[(i % length) + 1]
+        local dist = getLineDistance(x, y, z, point1, point2)
+        if dist < lowestDist then
+            lowestDist = dist
+        end
+    end
+    return lowestDist
 end
 
 function getButton(method,button,devices)
@@ -115,46 +133,44 @@ function isTracked(device)
 	return true
 end
 
-function drawSinglePointGrid(pass,point1,point2,cornerColor,miscColor)
-	local _,hy,_ = lovr.headset.getPosition("head")	
-	local lx1 = point1[1]
-	local ly1 = hy
-	local lz1 = point1[2]
-	local lx2 = point2[1]
-	local ly2 = hy
-	local lz2 = point2[2]
-	
-	local d = getDistanceBetweenPoints3D(lx1,ly1,lz1,lx2,ly2,lz2)
-	local dx = (lx2 - lx1) / d
-	local dy = (ly2 - ly1) / d
-	local dz = (lz2 - lz1) / d
-	
-	pass:setColor(unpack(miscColor))
-	local drawY = settings.grid_top
-	while drawY >= settings.grid_bottom do
-		pass:line({
-			lx1,drawY,lz1,
-			lx2,drawY,lz2
-		})
-		drawY = drawY - settings.grid_density
-	end
-	
-	pass:setColor(unpack(cornerColor))
-	pass:line({
-		lx1,settings.grid_bottom,lz1,
-		lx1,settings.grid_top,lz1
-	})
-	
-	pass:line({
-		lx1,settings.grid_bottom,lz1,
-		lx2,settings.grid_bottom,lz2
-	})
-	
-	pass:line({
-		lx1,settings.grid_top,lz1,
-		lx2,settings.grid_top,lz2
-	})
+function drawSinglePointGrid(pass, point1, point2, cornerColor, miscColor)
+    local _, hy, _ = lovr.headset.getPosition("head")
+    local lx1 = point1[1]
+    local ly1 = hy
+    local lz1 = point1[2]
+    local lx2 = point2[1]
+    local ly2 = hy
+    local lz2 = point2[2]
+
+    -- For the grid lines
+    pass:setColor(unpack(miscColor))
+    local drawY = settings.grid_top
+    while drawY >= settings.grid_bottom do
+        pass:line({
+            lx1, drawY, lz1,
+            lx2, drawY, lz2
+        })
+        drawY = drawY - settings.grid_density
+    end
+
+    -- For the perimeter lines
+    pass:setColor(unpack(cornerColor))
+    pass:line({
+        lx1, settings.grid_bottom, lz1,
+        lx1, settings.grid_top, lz1
+    })
+
+    pass:line({
+        lx1, settings.grid_bottom, lz1,
+        lx2, settings.grid_bottom, lz2
+    })
+
+    pass:line({
+        lx1, settings.grid_top, lz1,
+        lx2, settings.grid_top, lz2
+    })
 end
+
 
 function drawPointGrid(pass,points,cornerColor,miscColor)
 	local index = 2
@@ -280,40 +296,26 @@ function modeConfigure(pass)
 end
 
 function modeDraw(pass)
-	local x,y,z = lovr.headset.getPosition("head")
-	local lowestDist = 9999	
-	local index = 2
-	local length = #settings.points
-	if length < 1 then return end
-	while index <= length do
-		local dist = getLineDistance(x,y,z,settings.points[index - 1],settings.points[index])
-		if dist < lowestDist then lowestDist = dist end
-		index = index + 1
-	end
-	
-	lowestDist = (lowestDist - settings.fade_stop) / (settings.fade_start - settings.fade_stop)
-	if lowestDist < 0 then lowestDist = 0 end
-	if lowestDist > 1 then lowestDist = 1 end
-	
-	local cdr=settings.color_close_corners[1] - settings.color_far_corners[1]
-	cdr = settings.color_far_corners[1] + (cdr * lowestDist)
-	local cdg=settings.color_close_corners[2] - settings.color_far_corners[2]
-	cdg = settings.color_far_corners[2] + (cdg * lowestDist)
-	local cdb=settings.color_close_corners[3] - settings.color_far_corners[3]
-	cdb = settings.color_far_corners[3] + (cdb * lowestDist)
-	local cda=settings.color_close_corners[4] - settings.color_far_corners[4]
-	cda = settings.color_far_corners[4] + (cda * lowestDist)
-	
-	local gdr=settings.color_close_grid[1] - settings.color_far_grid[1]
-	gdr = settings.color_far_grid[1] + (gdr * lowestDist)
-	local gdg=settings.color_close_grid[2] - settings.color_far_grid[2]
-	gdg = settings.color_far_grid[2] + (gdg * lowestDist)
-	local gdb=settings.color_close_grid[3] - settings.color_far_grid[3]
-	gdb = settings.color_far_grid[3] + (gdb * lowestDist)
-	local gda=settings.color_close_grid[4] - settings.color_far_grid[4]
-	gda = settings.color_far_grid[4] + (gda * lowestDist)
-	
-	drawPointGrid(pass,settings.points,{cdr,cdg,cdb,cda},{gdr,gdg,gdb,gda})
+    local x, y, z = lovr.headset.getPosition("head")
+    local closestDist = getClosestDistanceToPerimeter(x, y, z, settings.points)
+
+    -- Update the fade logic based on the closest distance
+    closestDist = (closestDist - settings.fade_stop) / (settings.fade_start - settings.fade_stop)
+    closestDist = math.max(0, math.min(1, closestDist))
+
+    local function interpolateColor(startColor, endColor)
+        return {
+            startColor[1] + (endColor[1] - startColor[1]) * closestDist,
+            startColor[2] + (endColor[2] - startColor[2]) * closestDist,
+            startColor[3] + (endColor[3] - startColor[3]) * closestDist,
+            startColor[4] + (endColor[4] - startColor[4]) * closestDist
+        }
+    end
+
+	local cornerColor = interpolateColor(settings.color_far_corners, settings.color_close_corners)
+	local gridColor = interpolateColor(settings.color_far_grid, settings.color_close_grid)	
+    
+    drawPointGrid(pass, settings.points, cornerColor, gridColor)
 end
 
 function lovr.draw(pass)
