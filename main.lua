@@ -308,8 +308,23 @@ function modeConfigure(pass)
 end
 
 function modeDraw(pass)
-    local x, y, z = lovr.headset.getPosition("head")
-    local closestDist = getClosestDistanceToPerimeter(x, y, z, settings.points)
+    local hx, hy, hz = lovr.headset.getPosition("head")
+
+    -- Calculate the distance from the head to the perimeter
+    local perimeterDistHead = getClosestDistanceToPerimeter(hx, hy, hz, settings.points)
+
+    -- Check distance from each hand to the perimeter
+    local handDistances = {perimeterDistHead}
+    for _, hand in ipairs(hands) do
+        if isTracked(hand) then
+            local handX, handY, handZ = lovr.headset.getPosition(hand)
+            local dist = getClosestDistanceToPerimeter(handX, handY, handZ, settings.points)
+            table.insert(handDistances, dist)
+        end
+    end
+
+    -- Take the minimum of the distances for the fade logic
+    local closestDist = math.min(unpack(handDistances))
 
     -- Update the fade logic based on the closest distance
     closestDist = (closestDist - settings.fade_stop) / (settings.fade_start - settings.fade_stop)
@@ -324,8 +339,8 @@ function modeDraw(pass)
         }
     end
 
-	local cornerColor = interpolateColor(settings.color_far_corners, settings.color_close_corners)
-	local gridColor = interpolateColor(settings.color_far_grid, settings.color_close_grid)	
+    local cornerColor = interpolateColor(settings.color_far_corners, settings.color_close_corners)
+    local gridColor = interpolateColor(settings.color_far_grid, settings.color_close_grid)   
     
     drawPointGrid(pass, settings.points, cornerColor, gridColor)
 end
