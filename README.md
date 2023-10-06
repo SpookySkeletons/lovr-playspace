@@ -24,8 +24,8 @@ Settings are stored separated in the program directory, in `config/`.
 - `color_close_grid.json`: How to color the lines between the corners when close.
 - `color_close_corners.json`: How to color the points you've set when they're far.
 - `color_close_grid.json`: How to color the lines between the corners when far.
-- `fade_start.txt`: BROKEN! What is considered far away from a wall, in meters. Affects how colors fade.
-- `fade_start.txt`: BROKEN! What is considered close to a wall, in meters. Affects how colors fade.
+- `fade_start.txt`: What is considered far away from a wall, in meters. Affects how colors fade.
+- `fade_start.txt`: What is considered close to a wall, in meters. Affects how colors fade.
 - `grid_bottom.txt`: Where to start drawing lines from, relative to your ground.
 - `grid_density.txt`: How much to divide your lines for drawing a grid into it, in meters.
 - `grid_top.txt`: Where to stop drawing lines, relative to your ground.
