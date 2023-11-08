@@ -9,7 +9,7 @@ Room boundary overlay for OpenXR, made with LÖVR.
 
 ## How to run
 ```
-git clone "https://git.lumen.sh/Fierelier/lovr-playspace"
+git clone "https://github.com/SpookySkeletons/lovr-playspace"
 ./lovr-*.AppImage lovr-playspace
 ```
 
