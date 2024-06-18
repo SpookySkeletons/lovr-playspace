@@ -9,8 +9,8 @@ limbs = {
 	"head",
 	"hand/left",
 	"hand/right",
-	"hand/left/point",
-	"hand/right/point",
+	"hand/left/grip",
+	"hand/right/grip",
 	"elbow/left",
 	"elbow/right",
 	"shoulder/left",
@@ -255,8 +255,8 @@ function modeConfigure(pass)
     local hx, hy, hz = lovr.headset.getPosition("head")
     
     for _, hand in ipairs(hands) do
-        if isTracked(hand .. "/point") then
-            local cx, cy, cz = lovr.headset.getPosition(hand .. "/point")
+        if isTracked(hand) then
+            local cx, cy, cz = lovr.headset.getPosition(hand)
             
             -- Compute the direction from the controller to the headset
             local dirX = hx - cx
