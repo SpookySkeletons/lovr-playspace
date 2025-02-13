@@ -290,7 +290,7 @@ function modeConfigure(pass)
 	if inputDev ~= nil then
 		saveProg = saveProg - (deltaTime / 3)
 		if saveProg <= 0 then
-			lovr.filesystem.write("config/points.json", json.encode(settings.points))
+			lovr.filesystem.write("points.json", json.encode(settings.points))
 			deinitConfigure()
 			modeDraw(pass)
 			return

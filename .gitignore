@@ -1,2 +1,10 @@
 
 config/points.json
+
+lovr-x86_64.AppImage
+
+playspace.lovr
+
+build/
+
+*.gz
