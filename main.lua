@@ -1,7 +1,5 @@
 -- Bootstrap
 appName = "lovr-playspace"
-mainScriptPath = (debug.getinfo(1, "S").source:sub(2):match("(.*[/\\])") or "./"):sub(1,-2)
-package.path = mainScriptPath.. "/lib/?.lua;" ..mainScriptPath.. "/lib/?/_main.lua;" ..package.path
 
 -- App
 hands = {"hand/right","hand/left"}
@@ -24,46 +22,10 @@ limbs = {
 }
 
 configDirs = {}
-json = require("json")
-
-function platformConfig()
-	if os.getenv("HOME") ~= nil then
-		return os.getenv("HOME") .. "/.config"
-	end
-	
-	return os.getenv("APPDATA")
-end
-
-function fileExists(fileName)
-	local file = io.open(fileName,"rb")
-	if file == nil then return false end
-	file:close()
-	return true
-end
-
-function getConfigFile(fileName)
-	for _,path in ipairs(configDirs) do
-		if fileExists(path .. "/" .. fileName) then
-			return path .. "/" .. fileName
-		end
-	end
-end
+json = require('json/json')
 
 function userConfig(fileName)
 	return configDirs[1] .. "/" ..fileName
-end
-
-function fileWrite(fileName,content)
-	local file = io.open(fileName,"wb")
-	file:write(content)
-	file:close()
-end
-
-function readFile(fileName)
-	local file = io.open(fileName,"rb")
-	content = file:read("*all")
-	file:close()
-	return content
 end
 
 function getDistanceBetweenPoints3D(x1, y1, z1, x2, y2, z2)
@@ -184,54 +146,92 @@ function drawPointGrid(pass,points,cornerColor,miscColor)
 end
 
 function lovr.load()
-	lovr.graphics.setBackgroundColor(0.0, 0.0, 0.0, 0.0)
-	--table.insert(configDirs,platformConfig() .. "/" .. appName)
-	table.insert(configDirs,mainScriptPath .. "/config")
-	
-	settings = {}
-	settings.action_button = readFile(getConfigFile("action_button.txt"))
-	settings.check_density = tonumber(readFile(getConfigFile("check_density.txt")))
-	settings.fade_start = tonumber(readFile(getConfigFile("fade_start.txt")))
-	settings.fade_stop = tonumber(readFile(getConfigFile("fade_stop.txt")))
-	settings.grid_density = tonumber(readFile(getConfigFile("grid_density.txt")))
-	settings.grid_bottom = tonumber(readFile(getConfigFile("grid_bottom.txt")))
-	settings.grid_top = tonumber(readFile(getConfigFile("grid_top.txt")))
-	settings.color_close_corners = json.decode(readFile(getConfigFile("color_close_corners.json")))
-	settings.color_close_grid = json.decode(readFile(getConfigFile("color_close_grid.json")))
-	settings.color_far_corners = json.decode(readFile(getConfigFile("color_far_corners.json")))
-	settings.color_far_grid = json.decode(readFile(getConfigFile("color_far_grid.json")))
-	settings.points = {}
-	
-	--[[if not lovr.filesystem.isDirectory(configDirs[1]) then
-		fileWrite(userConfig("action_button.txt"),readFile(getConfigFile("action_button.txt")))
-		fileWrite(userConfig("check_density.txt"),readFile(getConfigFile("check_density.txt")))
-		fileWrite(userConfig("fade_start.txt"),readFile(getConfigFile("fade_start.txt")))
-		fileWrite(userConfig("fade_stop.txt"),readFile(getConfigFile("fade_stop.txt")))
-		fileWrite(userConfig("grid_density.txt"),readFile(getConfigFile("grid_density.txt")))
-		fileWrite(userConfig("grid_bottom.txt"),readFile(getConfigFile("grid_bottom.txt")))
-		fileWrite(userConfig("grid_top.txt"),readFile(getConfigFile("grid_top.txt")))
-		fileWrite(userConfig("color_close_corners.json"),readFile(getConfigFile("color_close_corners.json")))
-		fileWrite(userConfig("color_close_grid.json"),readFile(getConfigFile("color_close_grid.json")))
-		fileWrite(userConfig("color_far_corners.json"),readFile(getConfigFile("color_far_corners.json")))
-		fileWrite(userConfig("color_far_grid.json"),readFile(getConfigFile("color_far_grid.json")))
-		initConfigure()
-		return
-	end]]--
-	
-	if getConfigFile("points.json") == nil then
-		initConfigure()
-		return
-	end
-	
-	for _,hand in ipairs(hands) do
-		if lovr.headset.isDown(hand,settings.action_button) then
-			initConfigure()
-			return
+    lovr.graphics.setBackgroundColor(0.0, 0.0, 0.0, 0.0)
+    
+    -- Default settings
+    local defaults = {
+        action_button = "trigger",
+        check_density = 0.05,
+        fade_start = 0.5,
+        fade_stop = 2.0,
+        grid_density = 1.0,
+        grid_bottom = 0.0,
+        grid_top = 3,
+        color_close_corners = {0.45, 0.69, 0.79, 1.0},
+        color_close_grid = {0.45, 0.69, 0.79, 0.5},
+        color_far_corners = {0.45, 0.69, 0.79, 0},
+        color_far_grid = {0.45, 0.69, 0.79, 0},
+        points = {}
+    }
+
+    -- Helper function to read file with fallback to default
+	local function loadSetting(filename, default, parser)
+		print("Checking file:", filename)
+		
+		if not lovr.filesystem.isFile(filename) then
+			print("File doesn't exist, creating:", filename)
+			local valueToSave
+			if type(default) == "table" then
+				valueToSave = json.encode(default)
+			else
+				valueToSave = tostring(default)
+			end
+			
+			local success = lovr.filesystem.write(filename, valueToSave)
+			print("Write success:", success, "for", filename, "with value:", valueToSave)
+			return default
 		end
+		
+		-- File exists, try to read it
+		local content = lovr.filesystem.read(filename)
+		if content and parser then
+			local success, value = pcall(parser, content)
+			if success then return value end
+		elseif content then
+			return content
+		end
+		
+		return default
 	end
-	
-	settings.points = json.decode(readFile(getConfigFile("points.json")))
-	mode = modeDraw
+
+    -- Initialize settings with fallbacks
+    settings = {
+        action_button = loadSetting("action_button.txt", defaults.action_button),
+        check_density = loadSetting("check_density.txt", defaults.check_density, tonumber),
+        fade_start = loadSetting("fade_start.txt", defaults.fade_start, tonumber),
+        fade_stop = loadSetting("fade_stop.txt", defaults.fade_stop, tonumber),
+        grid_density = loadSetting("grid_density.txt", defaults.grid_density, tonumber),
+        grid_bottom = loadSetting("grid_bottom.txt", defaults.grid_bottom, tonumber),
+        grid_top = loadSetting("grid_top.txt", defaults.grid_top, tonumber),
+        color_close_corners = loadSetting("color_close_corners.json", defaults.color_close_corners, json.decode),
+        color_close_grid = loadSetting("color_close_grid.json", defaults.color_close_grid, json.decode),
+        color_far_corners = loadSetting("color_far_corners.json", defaults.color_far_corners, json.decode),
+        color_far_grid = loadSetting("color_far_grid.json", defaults.color_far_grid, json.decode),
+        points = {}
+    }
+
+    -- Handle points.json
+    local pointsPath = "points.json"
+    if not lovr.filesystem.isFile(pointsPath) then
+        initConfigure()
+        return
+    end
+
+    -- Check for action button press
+    for _, hand in ipairs(hands) do
+        if lovr.headset.isDown(hand, settings.action_button) then
+            initConfigure()
+            return
+        end
+    end
+
+    -- Load points if we haven't returned already
+    local pointsContent = lovr.filesystem.read(pointsPath)
+    if pointsContent then
+        settings.points = json.decode(pointsContent)
+    end
+    
+    mode = modeDraw
 end
 
 function initConfigure()
@@ -290,7 +290,7 @@ function modeConfigure(pass)
 	if inputDev ~= nil then
 		saveProg = saveProg - (deltaTime / 3)
 		if saveProg <= 0 then
-			fileWrite(userConfig("points.json"),json.encode(settings.points))
+			lovr.filesystem.write("config/points.json", json.encode(settings.points))
 			deinitConfigure()
 			modeDraw(pass)
 			return
