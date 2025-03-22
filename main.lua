@@ -32,6 +32,11 @@ function getDistanceBetweenPoints3D(x1, y1, z1, x2, y2, z2)
     return math.sqrt((x2 - x1)^2 + (z2 - z1)^2)
 end
 
+function getFloorMatrix()
+    local fx, fy, fz, fangle, fax, fay, faz = lovr.headset.getPose("floor")
+    return lovr.math.newMat4(lovr.math.vec3(fx, fy, fz), lovr.math.vec3(1, 1, 1), lovr.math.quat(fangle, fax, fay, faz))
+end
+
 function getLineDistance(x, _, z, point1, point2)  -- Notice the underscore for y
     -- Vector from point1 to point2
     local dx = point2[1] - point1[1]
@@ -67,8 +72,6 @@ function getLineDistance(x, _, z, point1, point2)  -- Notice the underscore for 
     return math.sqrt(dx_ * dx_ + dz_ * dz_)
 end
 
-
-
 function getClosestDistanceToPerimeter(x, y, z, points)
     local lowestDist = 9999
     local length = #points
@@ -87,12 +90,6 @@ function getButton(method,button,devices)
 	for _,device in ipairs(devices) do
 		if method(device,button) == true then return device end
 	end
-end
-
-function isTracked(device)
-	local x,y,z = lovr.headset.getPosition(device)
-	if x == 0.0 and y == 0.0 and z == 0.0 then return false end
-	return true
 end
 
 function drawSinglePointGrid(pass, point1, point2, cornerColor, miscColor)
@@ -145,8 +142,15 @@ function drawPointGrid(pass,points,cornerColor,miscColor)
 	drawSinglePointGrid(pass,points[length],points[1],cornerColor,miscColor)
 end
 
+function printTable(table)
+    for _,point in ipairs(table) do
+        print(point[1], " ", point[2])
+    end
+end
+
 function lovr.load()
     lovr.graphics.setBackgroundColor(0.0, 0.0, 0.0, 0.0)
+    print("Is tracked floor:", lovr.headset.isTracked('floor'))
     
     -- Default settings
     local defaults = {
@@ -207,7 +211,8 @@ function lovr.load()
         color_close_grid = loadSetting("color_close_grid.json", defaults.color_close_grid, json.decode),
         color_far_corners = loadSetting("color_far_corners.json", defaults.color_far_corners, json.decode),
         color_far_grid = loadSetting("color_far_grid.json", defaults.color_far_grid, json.decode),
-        points = {}
+        points = {},
+        transformed = false
     }
 
     -- Handle points.json
@@ -229,6 +234,8 @@ function lovr.load()
     local pointsContent = lovr.filesystem.read(pointsPath)
     if pointsContent then
         settings.points = json.decode(pointsContent)
+        print("FloorSpace:")
+        printTable(settings.points)
     end
     
     mode = modeDraw
@@ -253,10 +260,14 @@ end
 
 function modeConfigure(pass)
     local hx, hy, hz = lovr.headset.getPosition("head")
+    floorMatrixInv = getFloorMatrix():invert()
     
     for _, hand in ipairs(hands) do
-        if isTracked(hand) then
+        if lovr.headset.isTracked(hand) then
             local cx, cy, cz = lovr.headset.getPosition(hand)
+            local floorSpaceControlerVector = lovr.math.vec3(cx, cy, cz):transform(floorMatrixInv)
+            local fcx, fcy, fcz = floorSpaceControlerVector:unpack()
+
             
             -- Compute the direction from the controller to the headset
             local dirX = hx - cx
@@ -274,23 +285,29 @@ function modeConfigure(pass)
             pass:text(
                 "- Press '" .. settings.action_button .. "' to add a point -\n" ..
                 "- Hold '" .. settings.action_button .. "' to save -\n\n" ..
-                string.format("%.2f", cx) .. "," .. string.format("%.2f", cy) .. "," .. string.format("%.2f", cz),
+                string.format("%.2f", fcx) .. "," .. string.format("%.2f", fcy) .. "," .. string.format("%.2f", fcz),
                 cx, cy - 0.3, cz, 0.066, angle, 0, 1, 0
             )
         end
     end
 	
 	local inputDev = getButton(lovr.headset.wasReleased,settings.action_button,hands)
-	if inputDev ~= nil and isTracked(inputDev) then
-		local hx,_,hz = lovr.headset.getPosition(inputDev)
-		table.insert(settings.points,{hx,hz})
+	if inputDev ~= nil and lovr.headset.isTracked(inputDev) then
+        local cx, _, cz = lovr.headset.getPosition(inputDev)
+		table.insert(settings.points,{cx,cz})
 	end
 	
 	inputDev = getButton(lovr.headset.isDown,settings.action_button,hands)
 	if inputDev ~= nil then
 		saveProg = saveProg - (deltaTime / 3)
 		if saveProg <= 0 then
-			lovr.filesystem.write("points.json", json.encode(settings.points))
+            local floorSpacePoints = {}
+            for _,point in ipairs(settings.points) do
+                local floorSpacePoint = lovr.math.vec3(point[1], 0, point[2]):transform(floorMatrixInv)
+                local x, _, z = floorSpacePoint:unpack()
+                table.insert(floorSpacePoints,{x,z})
+            end
+			lovr.filesystem.write("points.json", json.encode(floorSpacePoints))
 			deinitConfigure()
 			modeDraw(pass)
 			return
@@ -310,13 +327,28 @@ end
 function modeDraw(pass)
     local hx, hy, hz = lovr.headset.getPosition("head")
 
+    if not settings.transformed and lovr.headset.isTracked("floor") then
+        local floorMatrix = getFloorMatrix()
+        print("floorMatrix: ", floorMatrix)
+        transformedPoints = {}
+        for _,point in ipairs(settings.points) do
+            local point = lovr.math.vec3(point[1], 0, point[2]):transform(floorMatrix)
+            local x, _, z = point:unpack()
+            table.insert(transformedPoints, {x, z})
+        end
+        settings.points = transformedPoints
+        print("HeadSpace:")
+        printTable(settings.points)
+        settings.transformed = true
+    end
+
     -- Calculate the distance from the head to the perimeter
     local perimeterDistHead = getClosestDistanceToPerimeter(hx, hy, hz, settings.points)
 
     -- Check distance from each hand to the perimeter
     local handDistances = {perimeterDistHead}
     for _, hand in ipairs(hands) do
-        if isTracked(hand) then
+        if lovr.headset.isTracked(hand) then
             local handX, handY, handZ = lovr.headset.getPosition(hand)
             local dist = getClosestDistanceToPerimeter(handX, handY, handZ, settings.points)
             table.insert(handDistances, dist)
