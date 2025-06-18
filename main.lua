@@ -1,6 +1,13 @@
 -- Bootstrap
 appName = "lovr-playspace"
 
+-- Function to get the current time
+function getCurrentTime()
+    local time = os.time()
+    local date = os.date("*t", time)
+    return string.format("%02d:%02d", date.hour, date.min)
+end
+
 -- App
 hands = {"hand/right","hand/left"}
 limbs = {
@@ -34,6 +41,11 @@ end
 
 function getFloorMatrix()
     local fx, fy, fz, fangle, fax, fay, faz = lovr.headset.getPose("floor")
+    return lovr.math.newMat4(lovr.math.vec3(fx, fy, fz), lovr.math.vec3(1, 1, 1), lovr.math.quat(fangle, fax, fay, faz))
+end
+
+function getHeadMatrix()
+    local fx, fy, fz, fangle, fax, fay, faz = lovr.headset.getPose("head")
     return lovr.math.newMat4(lovr.math.vec3(fx, fy, fz), lovr.math.vec3(1, 1, 1), lovr.math.quat(fangle, fax, fay, faz))
 end
 
@@ -378,5 +390,17 @@ function modeDraw(pass)
 end
 
 function lovr.draw(pass)
-	mode(pass)
+    mode(pass)
+
+    local hx, hy, hz = lovr.headset.getPosition("head")
+    local hangle, hax, hay, haz = lovr.headset.getOrientation("head")
+    local currentTime = getCurrentTime()
+    pass:setColor(1, 1, 1, 0.25)
+    local transform = lovr.math.newMat4()
+    transform:translate(hx, hy + 1.5, hz)
+    transform:rotate(math.pi / 2, 1, 0, 0)
+    transform:rotate(math.pi - math.atan2(hax, haz)*2, 0, 0, 1)
+    transform:translate(0, -0.1, 0)
+    transform:scale(0.1, 0.1, 0.1)
+    pass:text(currentTime, transform)
 end
