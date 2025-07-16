@@ -1,7 +1,6 @@
 -- Bootstrap
 appName = "lovr-playspace"
 
--- Function to get the current time
 function getCurrentTime()
     local time = os.time()
     local date = os.date("*t", time)
@@ -177,6 +176,7 @@ function lovr.load()
         color_close_grid = {0.45, 0.69, 0.79, 0.5},
         color_far_corners = {0.45, 0.69, 0.79, 0},
         color_far_grid = {0.45, 0.69, 0.79, 0},
+        show_time = 0,
         points = {}
     }
 
@@ -223,6 +223,7 @@ function lovr.load()
         color_close_grid = loadSetting("color_close_grid.json", defaults.color_close_grid, json.decode),
         color_far_corners = loadSetting("color_far_corners.json", defaults.color_far_corners, json.decode),
         color_far_grid = loadSetting("color_far_grid.json", defaults.color_far_grid, json.decode),
+        show_time = loadSetting("show_time.json", defaults.show_time, json.decode),
         points = {},
         transformed = false
     }
@@ -392,15 +393,17 @@ end
 function lovr.draw(pass)
     mode(pass)
 
-    local hx, hy, hz = lovr.headset.getPosition("head")
-    local hangle, hax, hay, haz = lovr.headset.getOrientation("head")
-    local currentTime = getCurrentTime()
-    pass:setColor(1, 1, 1, 0.25)
-    local transform = lovr.math.newMat4()
-    transform:translate(hx, hy + 1.5, hz)
-    transform:rotate(math.pi / 2, 1, 0, 0)
-    transform:rotate(math.pi - math.atan2(hax, haz)*2, 0, 0, 1)
-    transform:translate(0, -0.1, 0)
-    transform:scale(0.1, 0.1, 0.1)
-    pass:text(currentTime, transform)
+    if settings.show_time == 1 then
+        local hx, hy, hz = lovr.headset.getPosition("head")
+        local hangle, hax, hay, haz = lovr.headset.getOrientation("head")
+        local currentTime = getCurrentTime()
+        pass:setColor(1, 1, 1, 0.25)
+        local transform = lovr.math.newMat4()
+        transform:translate(hx, hy + 1.5, hz)
+        transform:rotate(math.pi / 2, 1, 0, 0)
+        transform:rotate(math.pi - math.atan2(hax, haz)*2, 0, 0, 1)
+        transform:translate(0, -0.1, 0)
+        transform:scale(0.1, 0.1, 0.1)
+        pass:text(currentTime, transform)
+    end
 end
