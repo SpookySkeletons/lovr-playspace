@@ -1,24 +1,30 @@
 -- Bootstrap
 appName = "lovr-playspace"
 
+function getCurrentTime()
+    local time = os.time()
+    local date = os.date("*t", time)
+    return string.format("%02d:%02d", date.hour, date.min)
+end
+
 -- App
 hands = {"hand/right","hand/left"}
 limbs = {
-	"head",
-	"hand/left",
-	"hand/right",
-	"hand/left/grip",
-	"hand/right/grip",
-	"elbow/left",
-	"elbow/right",
-	"shoulder/left",
-	"shoulder/right",
-	"chest",
-	"waist",
-	"knee/left",
-	"knee/right",
-	"foot/left",
-	"foot/right"
+    "head",
+    "hand/left",
+    "hand/right",
+    "hand/left/grip",
+    "hand/right/grip",
+    "elbow/left",
+    "elbow/right",
+    "shoulder/left",
+    "shoulder/right",
+    "chest",
+    "waist",
+    "knee/left",
+    "knee/right",
+    "foot/left",
+    "foot/right"
 }
 
 configDirs = {}
@@ -34,6 +40,11 @@ end
 
 function getFloorMatrix()
     local fx, fy, fz, fangle, fax, fay, faz = lovr.headset.getPose("floor")
+    return lovr.math.newMat4(lovr.math.vec3(fx, fy, fz), lovr.math.vec3(1, 1, 1), lovr.math.quat(fangle, fax, fay, faz))
+end
+
+function getHeadMatrix()
+    local fx, fy, fz, fangle, fax, fay, faz = lovr.headset.getPose("head")
     return lovr.math.newMat4(lovr.math.vec3(fx, fy, fz), lovr.math.vec3(1, 1, 1), lovr.math.quat(fangle, fax, fay, faz))
 end
 
@@ -87,9 +98,9 @@ function getClosestDistanceToPerimeter(x, y, z, points)
 end
 
 function getButton(method,button,devices)
-	for _,device in ipairs(devices) do
-		if method(device,button) == true then return device end
-	end
+    for _,device in ipairs(devices) do
+        if method(device,button) == true then return device end
+    end
 end
 
 function drawSinglePointGrid(pass, point1, point2, cornerColor, miscColor)
@@ -165,38 +176,39 @@ function lovr.load()
         color_close_grid = {0.45, 0.69, 0.79, 0.5},
         color_far_corners = {0.45, 0.69, 0.79, 0},
         color_far_grid = {0.45, 0.69, 0.79, 0},
+        show_time = 0,
         points = {}
     }
 
     -- Helper function to read file with fallback to default
-	local function loadSetting(filename, default, parser)
-		print("Checking file:", filename)
-		
-		if not lovr.filesystem.isFile(filename) then
-			print("File doesn't exist, creating:", filename)
-			local valueToSave
-			if type(default) == "table" then
-				valueToSave = json.encode(default)
-			else
-				valueToSave = tostring(default)
-			end
-			
-			local success = lovr.filesystem.write(filename, valueToSave)
-			print("Write success:", success, "for", filename, "with value:", valueToSave)
-			return default
-		end
-		
-		-- File exists, try to read it
-		local content = lovr.filesystem.read(filename)
-		if content and parser then
-			local success, value = pcall(parser, content)
-			if success then return value end
-		elseif content then
-			return content
-		end
-		
-		return default
-	end
+    local function loadSetting(filename, default, parser)
+        print("Checking file:", filename)
+
+        if not lovr.filesystem.isFile(filename) then
+            print("File doesn't exist, creating:", filename)
+            local valueToSave
+            if type(default) == "table" then
+                valueToSave = json.encode(default)
+            else
+                valueToSave = tostring(default)
+            end
+
+            local success = lovr.filesystem.write(filename, valueToSave)
+            print("Write success:", success, "for", filename, "with value:", valueToSave)
+            return default
+        end
+
+        -- File exists, try to read it
+        local content = lovr.filesystem.read(filename)
+        if content and parser then
+            local success, value = pcall(parser, content)
+            if success then return value end
+        elseif content then
+            return content
+        end
+
+        return default
+    end
 
     -- Initialize settings with fallbacks
     settings = {
@@ -211,6 +223,7 @@ function lovr.load()
         color_close_grid = loadSetting("color_close_grid.json", defaults.color_close_grid, json.decode),
         color_far_corners = loadSetting("color_far_corners.json", defaults.color_far_corners, json.decode),
         color_far_grid = loadSetting("color_far_grid.json", defaults.color_far_grid, json.decode),
+        show_time = loadSetting("show_time.json", defaults.show_time, json.decode),
         points = {},
         transformed = false
     }
@@ -290,38 +303,38 @@ function modeConfigure(pass)
             )
         end
     end
-	
-	local inputDev = getButton(lovr.headset.wasReleased,settings.action_button,hands)
-	if inputDev ~= nil and lovr.headset.isTracked(inputDev) then
+
+    local inputDev = getButton(lovr.headset.wasReleased,settings.action_button,hands)
+    if inputDev ~= nil and lovr.headset.isTracked(inputDev) then
         local cx, _, cz = lovr.headset.getPosition(inputDev)
-		table.insert(settings.points,{cx,cz})
-	end
-	
-	inputDev = getButton(lovr.headset.isDown,settings.action_button,hands)
-	if inputDev ~= nil then
-		saveProg = saveProg - (deltaTime / 3)
-		if saveProg <= 0 then
+        table.insert(settings.points,{cx,cz})
+    end
+
+    inputDev = getButton(lovr.headset.isDown,settings.action_button,hands)
+    if inputDev ~= nil then
+        saveProg = saveProg - (deltaTime / 3)
+        if saveProg <= 0 then
             local floorSpacePoints = {}
             for _,point in ipairs(settings.points) do
                 local floorSpacePoint = lovr.math.vec3(point[1], 0, point[2]):transform(floorMatrixInv)
                 local x, _, z = floorSpacePoint:unpack()
                 table.insert(floorSpacePoints,{x,z})
             end
-			lovr.filesystem.write("points.json", json.encode(floorSpacePoints))
-			deinitConfigure()
-			modeDraw(pass)
-			return
-		end
-	else
-		saveProg = 1.0
-	end
-	
-	pass:setColor(1,0,0,0.5)
-	for _,point in ipairs(settings.points) do
-		pass:sphere(point[1],1.5,point[2],0.1)
-	end
-	
-	modeDraw(pass)
+            lovr.filesystem.write("points.json", json.encode(floorSpacePoints))
+            deinitConfigure()
+            modeDraw(pass)
+            return
+        end
+    else
+        saveProg = 1.0
+    end
+
+    pass:setColor(1,0,0,0.5)
+    for _,point in ipairs(settings.points) do
+        pass:sphere(point[1],1.5,point[2],0.1)
+    end
+
+    modeDraw(pass)
 end
 
 function modeDraw(pass)
@@ -373,10 +386,24 @@ function modeDraw(pass)
 
     local cornerColor = interpolateColor(settings.color_far_corners, settings.color_close_corners)
     local gridColor = interpolateColor(settings.color_far_grid, settings.color_close_grid)   
-    
+
     drawPointGrid(pass, settings.points, cornerColor, gridColor)
 end
 
 function lovr.draw(pass)
-	mode(pass)
+    mode(pass)
+
+    if settings.show_time == 1 then
+        local hx, hy, hz = lovr.headset.getPosition("head")
+        local hangle, hax, hay, haz = lovr.headset.getOrientation("head")
+        local currentTime = getCurrentTime()
+        pass:setColor(1, 1, 1, 0.25)
+        local transform = lovr.math.newMat4()
+        transform:translate(hx, hy + 1.5, hz)
+        transform:rotate(math.pi / 2, 1, 0, 0)
+        transform:rotate(math.pi - math.atan2(hax, haz)*2, 0, 0, 1)
+        transform:translate(0, -0.1, 0)
+        transform:scale(0.1, 0.1, 0.1)
+        pass:text(currentTime, transform)
+    end
 end
