@@ -4,31 +4,48 @@
 
 Avoid bumping into walls! LÖVR Playspace works on any OpenXR runtime that implements EXTX_overlay - currently this is limited to Monado-based runtimes.
 
+For more information about Monado and the Linux FOSS VR stack, check out the [Linux VR Adventures Wiki][lvra-wiki].
+
 [![Preview](assets/preview.png)](assets/preview.png)
 
 ## Installation
 
-The recommended way to get LÖVR Playspace is to download the all-in-one AppImage from the [latest release][release].
-
 Your OpenXR runtime must be up and running before starting LÖVR Playspace.
 
-Either double-click the AppImage from your file browser, or run it in a terminal after `chmod +x`ing it.
+- **Arch Linux**: Use your AUR helper (paru or yay) to install [`lovr-playspace-bin`][aur-bin] or [`lovr-playspace-git`][aur-git] from the AUR. Note that using paru's Chroot option may not be working yet.
+- **All other distros**: Download the all-in-one AppImage from the [latest release][release]. Either double-click the AppImage from your file browser, or run it in a terminal after `chmod +x`ing it.
+
+## Autostarting with Envision
 
 > [!TIP]
-> If you're using Envision, you can launch LÖVR Playspace automatically when starting VR by adding a [custom plugin in Envision][custom-plugin].
+> If you're using Envision, you can launch LÖVR Playspace automatically when starting VR by using the [plugin system in Envision][envision-plugin].
+
+- **Arch Linux**: Both AUR packages include the required .desktop file. Once installed, **LÖVR Playspace** will show up in Envision's plugins menu.
+- **All other distros**:
+  - Sorry, stuff like Gear Lever won't work yet.
+  - Make sure the AppImage file has execute privileges.
+  - Download [lovr-playspace.desktop][desktop], save it to `~/.local/share/applications/`.
+  - Download [lovr-playspace.png][icon], save it to `~/.local/share/icons/hicolor/256x256/apps/`.
+  - For both `Exec` and `X-XR-Plugin-Exec` keys in the .desktop file, replace `lovr-playspace` with the full path to the AppImage file you downloaded.
+  - **LÖVR Playspace** will show up in Envision's plugins menu.
 
 [release]: https://github.com/SpookySkeletons/lovr-playspace/releases/latest
-[custom-plugin]: https://lvra.gitlab.io/docs/fossvr/envision/#adding-a-custom-plugin
+[envision-plugin]: https://wiki.vronlinux.org/docs/fossvr/envision/#plugin-system
+[lvra-wiki]: https://wiki.vronlinux.org/
+[aur-bin]: https://aur.archlinux.org/packages/lovr-playspace-bin
+[aur-git]: https://aur.archlinux.org/packages/lovr-playspace-git
+[desktop]: https://raw.githubusercontent.com/SpookySkeletons/lovr-playspace/refs/heads/main/dist/usr/share/applications/lovr-playspace.desktop
+[icon]: https://raw.githubusercontent.com/SpookySkeletons/lovr-playspace/refs/heads/main/dist/usr/share/icons/hicolor/256x256/apps/lovr-playspace.png
 
 ## Running from source
 
 Prerequisites:
 
 - **LÖVR**: If your distro has no package for it, I recommend downloading the [latest LÖVR AppImage](https://github.com/bjornbytes/lovr/releases/latest).
-- **git**: Required to git clone LÖVR Playspace, _with submodules!_
+- **git**: Required to git clone LÖVR Playspace, *with submodules!*
 - OpenXR runtime must be up and running
 
-```
+```bash
 git clone "https://github.com/SpookySkeletons/lovr-playspace" --recurse-submodules
 chmod +x ./lovr-v*.AppImage
 ./lovr-v*.AppImage lovr-playspace
